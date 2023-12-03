@@ -1,7 +1,7 @@
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
-  color-scheme: light dark;
+  color: rgb(77, 77, 77);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -30,47 +30,74 @@ body,
 
 #mag-RangeSlider-container {
   margin-left: 0.3rem;
+  margin-top: 0.3rem;
+  padding: 1rem;
 
   grid-row-start: 1;
-  grid-row-end: 8;
+  grid-row-end: 7;
   grid-column-start: 1;
-  grid-column-end: 6;
+  grid-column-end: 4;
 }
 
 #year-RangeSlider-container {
   margin-left: 0.3rem;
+  padding: 1rem;
 
-  grid-row-start: 8;
-  grid-row-end: 15;
+  grid-row-start: 7;
+  grid-row-end: 13;
   grid-column-start: 1;
-  grid-column-end: 6;
+  grid-column-end: 4;
 }
 
 #info {
+  padding: 1rem;
+
   grid-row-start: 1;
   grid-row-end: 4;
-  grid-column-start: 6;
+  grid-column-start: 4;
   grid-column-end: 9;
 }
 
 #shares-container {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
   grid-row-start: 4;
-  grid-row-end: 15;
+  grid-row-end: 13;
+  grid-column-start: 4;
+  grid-column-end: 6;
+}
+
+#shares-container2 {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  grid-row-start: 4;
+  grid-row-end: 13;
   grid-column-start: 6;
   grid-column-end: 9;
 }
 
 #magType-container {
   margin-left: 0.3rem;
+  padding: 1rem;
 
-  grid-row-start: 15;
+  grid-row-start: 13;
   grid-row-end: 29;
   grid-column-start: 1;
   grid-column-end: 5;
 }
 
 #magSource-container {
-  grid-row-start: 15;
+  padding: 1rem;
+
+  grid-row-start: 13;
   grid-row-end: 29;
   grid-column-start: 5;
   grid-column-end: 9;
@@ -78,7 +105,7 @@ body,
 
 #map-container {
   grid-row-start: 1;
-  grid-row-end: 43;
+  grid-row-end: 29;
   grid-column-start: 9;
   grid-column-end: 21;
 }
@@ -86,9 +113,19 @@ body,
 #mag-linechart-container {
   margin-left: 0.3rem;
   margin-bottom: 0.3rem;
+  margin-right: 0.3rem;
+  padding: 1rem;
 
   grid-row-start: 29;
   grid-row-end: 43;
   grid-column-start: 1;
-  grid-column-end: 9;
+  grid-column-end: 21;
+}
+
+.title {
+  text-align: center;
+}
+
+.shares {
+  font-size: 3rem;
 }
