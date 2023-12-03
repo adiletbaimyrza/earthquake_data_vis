@@ -1,35 +1,40 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import "./App.css";
+import React, { useRef, useEffect, useState } from "react";
+import mapboxgl from "mapbox-gl";
+import Plotly from "plotly.js-dist-min";
+
+mapboxgl.accessToken =
+  "MAPBOX_TOKEN_REMOVED";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const mapContainer = useRef(null);
+  const map = useRef(null);
+  const [lng, setLng] = useState(-70.9);
+  const [lat, setLat] = useState(42.35);
+  const [zoom, setZoom] = useState(9);
+
+  useEffect(() => {
+    if (map.current) return;
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [lng, lat],
+      zoom: zoom,
+    });
+  });
 
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <div id="mag-RangeSlider-container" className="card"></div>
+      <div id="year-RangeSlider-container" className="card"></div>
+      <div id="shares-container" className="card"></div>
+      <div id="info" className="card"></div>
+      <div id="magType-container" className="card"></div>
+      <div id="magSource-container" className="card"></div>
+      <div ref={mapContainer} id="map-container" className="card"></div>
+      <div id="mag-linechart-container" className="card"></div>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
