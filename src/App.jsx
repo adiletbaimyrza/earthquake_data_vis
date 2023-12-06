@@ -4,7 +4,7 @@ import Plotly from "plotly.js-dist";
 import * as d3 from "d3";
 import "chart.js/auto";
 import { Chart } from "react-chartjs-2";
-import { Slider, CircularProgress } from "@mui/material";
+import { Slider } from "@mui/material";
 import {
   updateShares,
   updateQuakeNumber,
@@ -13,10 +13,6 @@ import {
   updateLineChart,
   updateMap,
 } from "./updateLogic";
-
-const startingLongitude = -70.9;
-const startingLatitude = 42.35;
-const startingZoom = 8;
 
 function App() {
   const [dataset, setDataset] = useState(null);
