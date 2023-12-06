@@ -1,154 +1,198 @@
 import "./App.css";
 import { useRef, useEffect, useState } from "react";
-import mapboxgl from "mapbox-gl";
+import Plotly from "plotly.js-dist";
 import * as d3 from "d3";
 import "chart.js/auto";
 import { Chart } from "react-chartjs-2";
-import { Slider } from "@mui/material";
+import { Slider, CircularProgress } from "@mui/material";
+import {
+  updateShares,
+  updateQuakeNumber,
+  updatePieChart,
+  updateBarChart,
+  updateLineChart,
+  updateMap,
+} from "./updateLogic";
 
-mapboxgl.accessToken =
-  "MAPBOX_TOKEN_REMOVED";
+const startingLongitude = -70.9;
+const startingLatitude = 42.35;
+const startingZoom = 8;
 
 function App() {
-  const mapContainer = useRef(null);
-  const map = useRef(null);
-  const [lng, setLng] = useState(-70.9);
-  const [lat, setLat] = useState(42.35);
-  const [zoom, setZoom] = useState(9);
+  const [dataset, setDataset] = useState(null);
 
+  const [shares, setShares] = useState(null);
+  const [quakeNumber, setQuakeNumber] = useState(null);
   const [pieChartData, setPieChartData] = useState(null);
   const [barChartData, setBarChartData] = useState(null);
-  const [areaChartData, setAreaChartData] = useState(null);
+  const [lineChartData, setLineChartData] = useState(null);
+  const [mapData, setMapData] = useState(null);
+
+  const [magRange, setMagRange] = useState(null);
+  const [yearRange, setYearRange] = useState(null);
+
+  const minMag = useRef();
+  const maxMag = useRef();
+  const minYear = useRef();
+  const maxYear = useRef();
 
   useEffect(() => {
-    if (map.current) return;
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [lng, lat],
-      zoom: zoom,
+    const updateAllOnFilter = (dataset) => {
+      if (!dataset) return;
+
+      const filteredData = dataset.filter((record) => {
+        const mag = Number(record.mag);
+        const year = Number(record.year);
+        return (
+          mag >= magRange[0] &&
+          mag <= magRange[1] &&
+          year >= yearRange[0] &&
+          year <= yearRange[1]
+        );
+      });
+
+      updateShares(filteredData, dataset, setShares);
+      updateQuakeNumber(filteredData, setQuakeNumber);
+      updatePieChart(filteredData, setPieChartData);
+      updateBarChart(filteredData, setBarChartData);
+      updateLineChart(filteredData, setLineChartData);
+      updateMap(filteredData, setMapData);
+    };
+
+    updateAllOnFilter(dataset);
+  }, [magRange, yearRange, dataset]);
+
+  useEffect(() => {
+    if (!mapData) return;
+
+    var data = [
+      {
+        type: "scattermapbox",
+        mode: "markers",
+        lon: mapData.longitudes,
+        lat: mapData.latitudes,
+        marker: {
+          color: mapData.colors,
+          cmin: 0,
+          cmax: 1.4,
+
+          opacity: 0.8,
+          size: mapData.bubbleSizes,
+        },
+      },
+    ];
+
+    var layout = {
+      hovermode: "closest",
+      mapbox: {
+        style: "dark",
+        bearing: 0,
+        center: {
+          lat: 45,
+          lon: 26,
+        },
+        pitch: 0,
+        zoom: 1,
+        dragmode: "lasso",
+      },
+      margin: {
+        r: 0,
+        t: 0,
+        b: 0,
+        l: 0,
+        pad: 0,
+      },
+    };
+
+    Plotly.setPlotConfig({
+      mapboxAccessToken:
+        "MAPBOX_TOKEN_REMOVED",
     });
-  });
+
+    if (document.getElementById("map-container").children.length === 0) {
+      Plotly.newPlot("map-container", data, layout);
+    } else {
+      Plotly.react(
+        "map-container",
+        data,
+        document.getElementById("map-container").layout,
+      );
+    }
+  }, [mapData]);
 
   useEffect(() => {
-    d3.csv("/src/usgs-dataset.csv").then((dataset) => makeCharts(dataset));
+    d3.csv("/src/usgs-dataset.csv").then((dataset) => {
+      const magValues = dataset.map((record) => Number(record.mag));
+      minMag.current = Math.min(...magValues);
+      maxMag.current = Math.max(...magValues);
+      setMagRange([minMag.current, maxMag.current]);
+
+      const yearValues = dataset.map((record) => Number(record.year));
+      minYear.current = Math.min(...yearValues);
+      maxYear.current = Math.max(...yearValues);
+      setYearRange([minYear.current, maxYear.current]);
+
+      setDataset(dataset);
+      initializeAll(dataset);
+    });
   }, []);
 
-  const makeCharts = (dataset) => {
-    const pieChartData = dataset.reduce((counts, record) => {
-      const magType = record.magType;
-      counts[magType] = (counts[magType] || 0) + 1;
-      return counts;
-    }, {});
-
-    const pieChartLabels = Object.keys(pieChartData);
-    const pieChartValues = Object.values(pieChartData);
-
-    setPieChartData({
-      type: "pie",
-      data: {
-        labels: pieChartLabels,
-        datasets: [
-          {
-            label: "Records by Magnitude Type",
-            data: pieChartValues,
-          },
-        ],
-      },
-      options: {
-        aspectRatio: 1.1,
-      },
-    });
-
-    const barChartData = dataset.reduce((counts, record) => {
-      const magSource = record.magSource;
-      counts[magSource] = (counts[magSource] || 0) + 1;
-      return counts;
-    }, {});
-
-    const sortedBarChartData = Object.entries(barChartData)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3);
-
-    const sortedBarChartDataJSON = Object.fromEntries(sortedBarChartData);
-
-    const barChartLabels = Object.keys(sortedBarChartDataJSON);
-    const barChartValues = Object.values(sortedBarChartDataJSON);
-
-    setBarChartData({
-      type: "bar",
-      data: {
-        labels: barChartLabels,
-        datasets: [
-          {
-            label: "Records by Source Type",
-            data: barChartValues,
-          },
-        ],
-      },
-      options: {
-        scales: {
-          y: {
-            beginAtZero: true,
-          },
-        },
-        aspectRatio: 1.1,
-      },
-    });
-
-    const areaChartData = dataset.reduce((counts, record) => {
-      const mag = record.mag;
-      counts[mag] = (counts[mag] || 0) + 1;
-      return counts;
-    }, {});
-
-    const areaChartLabels = Object.keys(areaChartData);
-    const areaChartValues = Object.values(areaChartData);
-
-    setAreaChartData({
-      type: "line",
-      data: {
-        labels: areaChartLabels,
-        datasets: [
-          {
-            label: "Number of earthquakes",
-            data: areaChartValues.map((value, index) => ({
-              x: areaChartLabels[index],
-              y: value,
-              label: `Custom label for point ${index}`,
-            })),
-            fill: true, // This will fill the area under the line
-            backgroundColor: "rgba(75,192,192,0.4)",
-            borderColor: "rgba(75,192,192,1)",
-          },
-        ],
-      },
-      options: {
-        aspectRatio: 6.4,
-      },
-    });
+  const initializeAll = (dataset) => {
+    updateShares(dataset, dataset, setShares);
+    updateQuakeNumber(dataset, setQuakeNumber);
+    updatePieChart(dataset, setPieChartData);
+    updateBarChart(dataset, setBarChartData);
+    updateLineChart(dataset, setLineChartData);
+    updateMap(dataset, setMapData);
   };
 
   return (
     <>
       <div id="mag-RangeSlider-container" className="card">
         <p className="title">Magnitutude Range</p>
-        <Slider sx={{ marginTop: "2rem" }} valueLabelDisplay="auto" />
+        {magRange && (
+          <Slider
+            sx={{ marginTop: "2rem" }}
+            valueLabelDisplay="auto"
+            min={minMag.current}
+            max={maxMag.current}
+            step={0.1}
+            defaultValue={magRange}
+            onChange={(event) => {
+              setMagRange(event.target.value);
+            }}
+          />
+        )}
       </div>
       <div id="year-RangeSlider-container" className="card">
         <p className="title">Year Range</p>
-        <Slider sx={{ marginTop: "2rem" }} valueLabelDisplay="auto" />
+        {yearRange && (
+          <Slider
+            sx={{ marginTop: "2rem" }}
+            valueLabelDisplay="auto"
+            min={minYear.current}
+            max={maxYear.current}
+            step={1}
+            defaultValue={yearRange}
+            onChange={(event) => {
+              setYearRange(event.target.value);
+            }}
+          />
+        )}
       </div>
       <div id="shares-container" className="card">
         <p className="title">Share of all earthquakes</p>
-        <p className="shares title">100%</p>
+        <p className="shares title">{shares}%</p>
       </div>
       <div id="shares-container2" className="card">
         <p className="title">Total number of specified earthquakes</p>
-        <p className="shares title">8000</p>
+        <p className="shares title">{quakeNumber}</p>
       </div>
       <div id="info" className="card">
-        <p className="title">Need some help on abbreviations? Click me</p>
+        <p className="title">
+          Need some help on abbreviations?{" "}
+          <span className="link">Click me</span>
+        </p>
       </div>
       <div id="magType-container" className="card">
         <p className="title">Magnitude Type Distribution</p>
@@ -170,13 +214,13 @@ function App() {
           ></Chart>
         )}
       </div>
-      <div ref={mapContainer} id="map-container" className="card"></div>
+      <div id="map-container" className="card"></div>
       <div id="mag-linechart-container" className="card">
-        {areaChartData && (
+        {lineChartData && (
           <Chart
-            type={areaChartData.type}
-            data={areaChartData.data}
-            options={areaChartData.options}
+            type={lineChartData.type}
+            data={lineChartData.data}
+            options={lineChartData.options}
           />
         )}
       </div>

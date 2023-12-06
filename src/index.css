@@ -1,7 +1,7 @@
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
-  color: rgb(77, 77, 77);
+  color: white;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -24,14 +24,24 @@ body,
 }
 
 .card {
-  background-color: white;
+  background-color: #343332;
   border-radius: 1rem;
+}
+
+.link {
+  color: rgb(255, 128, 0);
+}
+
+.link:hover {
+  color: rgb(222, 145, 0);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 #mag-RangeSlider-container {
   margin-left: 0.3rem;
   margin-top: 0.3rem;
-  padding: 1rem;
+  padding: 1rem 2rem;
 
   grid-row-start: 1;
   grid-row-end: 7;
@@ -41,7 +51,7 @@ body,
 
 #year-RangeSlider-container {
   margin-left: 0.3rem;
-  padding: 1rem;
+  padding: 1rem 2rem;
 
   grid-row-start: 7;
   grid-row-end: 13;
@@ -51,6 +61,7 @@ body,
 
 #info {
   padding: 1rem;
+  margin-top: 0.3rem;
 
   grid-row-start: 1;
   grid-row-end: 4;
