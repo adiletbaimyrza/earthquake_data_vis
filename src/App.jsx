@@ -117,7 +117,7 @@ function App() {
   }, [mapData]);
 
   useEffect(() => {
-    d3.csv("/src/usgs-dataset.csv").then((dataset) => {
+    d3.csv("/usgs-dataset.csv").then((dataset) => {
       const magValues = dataset.map((record) => Number(record.mag));
       minMag.current = Math.min(...magValues);
       maxMag.current = Math.max(...magValues);
