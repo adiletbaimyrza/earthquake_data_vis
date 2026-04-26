@@ -17,11 +17,29 @@ export type EarthquakeRecord = {
 
 export type Range = [number, number];
 
+export type RgbaColor = [number, number, number, number];
+
+export type MapPoint = {
+  id: string;
+  position: [number, number];
+  mapRadius: number;
+  globeRadius: number;
+  fillColor: RgbaColor;
+  magnitude: number;
+  depth: number;
+  place: string;
+  time: string;
+  magType: string;
+  magSource: string;
+};
+
 export type MapData = {
-  longitudes: number[];
-  latitudes: number[];
-  bubbleSizes: number[];
-  colors: string[];
+  points: MapPoint[];
+  bounds: {
+    longitude: Range;
+    latitude: Range;
+  };
+  maxMagnitude: number;
 };
 
 export type ChartConfig<T extends ChartType> = {

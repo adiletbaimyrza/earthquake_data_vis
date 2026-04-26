@@ -119,6 +119,7 @@ body,
   grid-row-end: 29;
   grid-column-start: 9;
   grid-column-end: 21;
+  overflow: hidden;
 }
 
 #mag-linechart-container {
@@ -160,4 +161,80 @@ body,
 .data-source-status {
   font-size: 0.85rem;
   opacity: 0.8;
+}
+
+.map-shell {
+  position: relative;
+  height: 100%;
+  background:
+    radial-gradient(circle at top, rgba(39, 69, 104, 0.45), transparent 46%),
+    linear-gradient(180deg, #06101a 0%, #07131f 55%, #04070c 100%);
+}
+
+.map-toolbar {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  pointer-events: none;
+}
+
+.map-toolbar > * {
+  pointer-events: auto;
+}
+
+.map-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.map-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.map-subtitle {
+  max-width: 24rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.85rem;
+}
+
+.map-legend {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background-color: rgba(5, 12, 22, 0.72);
+  backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.82rem;
+}
+
+.map-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: center;
 }

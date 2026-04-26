@@ -1,4 +1,4 @@
-import type { ChartConfig, EarthquakeRecord, MapData } from "./types";
+import type { ChartConfig, EarthquakeRecord, MapData, RgbaColor } from "./types";
 
 export const computeSharesPercent = (
   filtered: EarthquakeRecord[],
@@ -7,6 +7,29 @@ export const computeSharesPercent = (
 
 export const computeQuakeNumber = (filtered: EarthquakeRecord[]): number =>
   filtered.length;
+
+const parseHexColor = (value: string): RgbaColor => {
+  const normalized = value.trim();
+  const hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
+  const expanded =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((char) => `${char}${char}`)
+          .join("")
+      : hex;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) {
+    return [255, 128, 0, 220];
+  }
+
+  return [
+    Number.parseInt(expanded.slice(0, 2), 16),
+    Number.parseInt(expanded.slice(2, 4), 16),
+    Number.parseInt(expanded.slice(4, 6), 16),
+    220,
+  ];
+};
 
 const countBy = (
   records: EarthquakeRecord[],
@@ -82,9 +105,49 @@ export const buildLineChart = (
   };
 };
 
-export const buildMapData = (data: EarthquakeRecord[]): MapData => ({
-  longitudes: data.map((r) => parseFloat(r.longitude)),
-  latitudes: data.map((r) => parseFloat(r.latitude)),
-  bubbleSizes: data.map((r) => parseFloat(r.bubble_size)),
-  colors: data.map((r) => r.color),
-});
+export const buildMapData = (data: EarthquakeRecord[]): MapData => {
+  if (data.length === 0) {
+    return {
+      points: [],
+      bounds: {
+        longitude: [-180, 180],
+        latitude: [-85, 85],
+      },
+      maxMagnitude: 0,
+    };
+  }
+
+  const points = data.map((record) => {
+    const longitude = Number.parseFloat(record.longitude);
+    const latitude = Number.parseFloat(record.latitude);
+    const magnitude = Number.parseFloat(record.mag);
+    const depth = Number.parseFloat(record.depth);
+    const bubbleSize = Number.parseFloat(record.bubble_size);
+
+    return {
+      id: record.id,
+      position: [longitude, latitude] as [number, number],
+      mapRadius: Math.max(bubbleSize * 1.8, 3),
+      globeRadius: Math.max(bubbleSize * 22000, 12000),
+      fillColor: parseHexColor(record.color),
+      magnitude,
+      depth,
+      place: record.place,
+      time: record.time,
+      magType: record.magType,
+      magSource: record.magSource,
+    };
+  });
+
+  const longitudes = points.map((point) => point.position[0]);
+  const latitudes = points.map((point) => point.position[1]);
+
+  return {
+    points,
+    bounds: {
+      longitude: [Math.min(...longitudes), Math.max(...longitudes)],
+      latitude: [Math.min(...latitudes), Math.max(...latitudes)],
+    },
+    maxMagnitude: Math.max(...points.map((point) => point.magnitude), 0),
+  };
+};
