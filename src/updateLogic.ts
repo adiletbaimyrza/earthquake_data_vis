@@ -1,4 +1,15 @@
-import type { ChartConfig, EarthquakeRecord, MapData, RgbaColor } from "./types";
+import { DESIGN_COLORS, bubbleColorForMagnitude } from "./designTokens";
+import type { ChartConfig, EarthquakeRecord, MapData } from "./types";
+
+const CHART_MONO = '"JetBrains Mono", monospace';
+const INK_SECONDARY = DESIGN_COLORS.ink1;
+const INK_TERTIARY = DESIGN_COLORS.ink2;
+const LINE = DESIGN_COLORS.line;
+const ACCENT = DESIGN_COLORS.accent;
+const ACCENT_WARM = DESIGN_COLORS.accentWarm;
+const ACCENT_COOL = DESIGN_COLORS.accentCool;
+const DANGER = DESIGN_COLORS.danger;
+const PIE_COLORS = [ACCENT, ACCENT_WARM, ACCENT_COOL, DANGER, "#7F8EA3"];
 
 export const computeSharesPercent = (
   filtered: EarthquakeRecord[],
@@ -7,29 +18,6 @@ export const computeSharesPercent = (
 
 export const computeQuakeNumber = (filtered: EarthquakeRecord[]): number =>
   filtered.length;
-
-const parseHexColor = (value: string): RgbaColor => {
-  const normalized = value.trim();
-  const hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
-  const expanded =
-    hex.length === 3
-      ? hex
-          .split("")
-          .map((char) => `${char}${char}`)
-          .join("")
-      : hex;
-
-  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) {
-    return [255, 128, 0, 220];
-  }
-
-  return [
-    Number.parseInt(expanded.slice(0, 2), 16),
-    Number.parseInt(expanded.slice(2, 4), 16),
-    Number.parseInt(expanded.slice(4, 6), 16),
-    220,
-  ];
-};
 
 const countBy = (
   records: EarthquakeRecord[],
@@ -51,10 +39,25 @@ export const buildPieChart = (data: EarthquakeRecord[]): ChartConfig<"pie"> => {
         {
           label: "Records by Magnitude Type",
           data: Object.values(counts),
+          backgroundColor: PIE_COLORS,
+          borderColor: "#11141A",
+          borderWidth: 1,
         },
       ],
     },
-    options: { aspectRatio: 1.1 },
+    options: {
+      aspectRatio: 1.1,
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            color: INK_SECONDARY,
+            font: { family: CHART_MONO, size: 10 },
+            padding: 18,
+          },
+        },
+      },
+    },
   };
 };
 
@@ -72,36 +75,42 @@ export const buildBarChart = (data: EarthquakeRecord[]): ChartConfig<"bar"> => {
         {
           label: "Records by Source Type",
           data: top3.map(([, value]) => value),
+          backgroundColor: [ACCENT, ACCENT_WARM, ACCENT_COOL],
+          borderRadius: 4,
+          borderSkipped: false,
         },
       ],
     },
     options: {
-      scales: { y: { beginAtZero: true } },
+      plugins: {
+        legend: {
+          labels: {
+            color: INK_SECONDARY,
+            font: { family: CHART_MONO, size: 10 },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: INK_SECONDARY,
+            font: { family: CHART_MONO, size: 10 },
+          },
+          grid: { display: false },
+          border: { color: LINE },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: INK_TERTIARY,
+            font: { family: CHART_MONO, size: 10 },
+          },
+          grid: { color: LINE },
+          border: { color: LINE },
+        },
+      },
       aspectRatio: 1.1,
     },
-  };
-};
-
-export const buildLineChart = (
-  data: EarthquakeRecord[],
-): ChartConfig<"line"> => {
-  const counts = countBy(data, "mag");
-
-  return {
-    type: "line",
-    data: {
-      labels: Object.keys(counts),
-      datasets: [
-        {
-          label: "Number of earthquakes",
-          data: Object.values(counts),
-          fill: true,
-          backgroundColor: "rgba(75,192,192,0.4)",
-          borderColor: "rgba(75,192,192,1)",
-        },
-      ],
-    },
-    options: { aspectRatio: 6.4 },
   };
 };
 
@@ -129,7 +138,7 @@ export const buildMapData = (data: EarthquakeRecord[]): MapData => {
       position: [longitude, latitude] as [number, number],
       mapRadius: Math.max(bubbleSize * 1.8, 3),
       globeRadius: Math.max(bubbleSize * 22000, 12000),
-      fillColor: parseHexColor(record.color),
+      fillColor: bubbleColorForMagnitude(magnitude),
       magnitude,
       depth,
       place: record.place,
