@@ -6,10 +6,11 @@ type StatCardProps = {
 };
 
 const StatCard = ({ id, title, value, suffix = "" }: StatCardProps) => (
-  <div id={id} className="card">
-    <p className="title">{title}</p>
-    <p className="shares title">
-      {value}
+  <div id={id} className="card stat-card">
+    <p className="panel-kicker">Selection Metric</p>
+    <p className="panel-title">{title}</p>
+    <p className="shares stat-value">
+      {value ?? "0"}
       {suffix}
     </p>
   </div>

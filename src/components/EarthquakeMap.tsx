@@ -1,9 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
-import { MapView, _GlobeView as GlobeView, type PickingInfo } from "@deck.gl/core";
-import { GeoJsonLayer, PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
+import {
+  MapView,
+  _GlobeView as GlobeView,
+  type PickingInfo,
+} from "@deck.gl/core";
+import {
+  GeoJsonLayer,
+  PathLayer,
+  PolygonLayer,
+  ScatterplotLayer,
+} from "@deck.gl/layers";
 import DeckGL from "@deck.gl/react";
-import type { MapData, MapPoint } from "../types";
+import {
+  MAP_GRATICULE_GLOBE_RGBA,
+  MAP_GRATICULE_MAP_RGBA,
+  MAP_LAND_GLOBE_RGBA,
+  MAP_LAND_GLOBE_STROKE_RGBA,
+  MAP_LAND_RGBA,
+  MAP_OCEAN_RGBA,
+  bubbleGlowColorForMagnitude,
+} from "../designTokens";
+import type { MapData, MapPoint, RgbaColor } from "../types";
 
 type Props = { mapData: MapData | null };
 
@@ -54,8 +72,6 @@ const WORLD_SURFACE = [
   },
 ];
 const LAND_DATA_URL = `${import.meta.env.BASE_URL}ne_110m_land.geojson`;
-const OCEAN_COLOR: [number, number, number, number] = [8, 28, 44, 255];
-const LAND_COLOR: [number, number, number, number] = [46, 78, 64, 255];
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -67,9 +83,16 @@ const wrapLongitude = (longitude: number): number => {
   return next;
 };
 
-const getGlobeBubbleRadius = (point: MapPoint, zoom: number): number => {
-  const zoomScale = 1 / Math.pow(1.45, Math.max(0, zoom));
-  return clamp(point.mapRadius * 0.9 * zoomScale, 1.5, 12);
+const getGlobeBubbleRadius = (point: MapPoint, zoom: number, totalPoints: number): number => {
+  const densityFactor = Math.max(0.25, Math.min(1.0, 1500 / totalPoints));
+  const zoomFactor = 0.4 + zoom * 0.15;
+  return clamp(point.mapRadius * densityFactor * zoomFactor, 0.8, 16);
+};
+
+const getMapBubbleRadius = (point: MapPoint, zoom: number, totalPoints: number): number => {
+  const densityFactor = Math.max(0.3, Math.min(1.0, 1200 / totalPoints));
+  const zoomFactor = 0.5 + zoom * 0.2;
+  return point.mapRadius * densityFactor * zoomFactor;
 };
 
 const buildGraticule = (): GraticulePath[] => {
@@ -119,7 +142,7 @@ const createGlobeViewState = (mapData: MapData | null): ControlledViewState => {
   return {
     longitude: clamp((minLon + maxLon) / 2, -170, 170),
     latitude: clamp((minLat + maxLat) / 2, -50, 50),
-    zoom: 0.15,
+    zoom: 2.5,
     pitch: 0,
     bearing: 0,
   };
@@ -143,13 +166,14 @@ const formatTooltip = (point: MapPoint): string =>
   ].join("\n");
 
 const EarthquakeMap = ({ mapData }: Props) => {
-  const [viewMode, setViewMode] = useState<ViewMode>("map");
-  const [isAutoRotateEnabled, setIsAutoRotateEnabled] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("globe");
+  const [isAutoRotateEnabled, setIsAutoRotateEnabled] =
+    useState<boolean>(false);
   const [mapViewState, setMapViewState] = useState<ControlledViewState>(() =>
     createMapViewState(mapData),
   );
-  const [globeViewState, setGlobeViewState] = useState<ControlledViewState>(() =>
-    createGlobeViewState(mapData),
+  const [globeViewState, setGlobeViewState] = useState<ControlledViewState>(
+    () => createGlobeViewState(mapData),
   );
 
   useEffect(() => {
@@ -189,17 +213,83 @@ const EarthquakeMap = ({ mapData }: Props) => {
     };
   }, [isAutoRotateEnabled, viewMode]);
 
-  const points = mapData?.points ?? [];
+  const points = useMemo(() => mapData?.points ?? [], [mapData]);
   const hasData = points.length > 0;
   const globeZoom = globeViewState.zoom;
+  const mapZoom = mapViewState.zoom;
+
+  const visiblePoints = useMemo(() => {
+    if (points.length === 0) return [];
+
+    const currentZoom = viewMode === "map" ? mapZoom : globeZoom;
+    const magThreshold =
+      currentZoom < 0.5 ? 6.5 : currentZoom < 1.2 ? 5.5 : currentZoom < 2.0 ? 4.5 : 0;
+
+    let filtered = points.filter((p) => p.magnitude >= magThreshold);
+
+    if (viewMode === "globe") {
+      const { longitude: cLon, latitude: cLat } = globeViewState;
+      const degToRad = Math.PI / 180;
+      const phi1 = cLat * degToRad;
+      const lambda0 = cLon * degToRad;
+
+      filtered = filtered.filter((p) => {
+        const phi = p.position[1] * degToRad;
+        const lambda = p.position[0] * degToRad;
+        const cosDiff =
+          Math.sin(phi1) * Math.sin(phi) +
+          Math.cos(phi1) * Math.cos(phi) * Math.cos(lambda - lambda0);
+        return cosDiff > -0.1;
+      });
+    }
+
+    return filtered.sort((a, b) => a.magnitude - b.magnitude);
+  }, [points, viewMode, mapZoom, globeZoom, globeViewState]);
 
   const baseLayers = useMemo(
     () => [
+      ...(viewMode === "globe"
+        ? [
+            new ScatterplotLayer({
+              id: "globe-atmosphere-glow-outer",
+              data: [{ position: [0, 0, -6370997] }],
+              getPosition: (d) => d.position as [number, number, number],
+              getRadius: 6370997 * 1.15,
+              radiusUnits: "meters",
+              getFillColor: [232, 116, 60, 10],
+              stroked: false,
+              billboard: true,
+              pickable: false,
+            }),
+            new ScatterplotLayer({
+              id: "globe-atmosphere-glow-mid",
+              data: [{ position: [0, 0, -6370997] }],
+              getPosition: (d) => d.position as [number, number, number],
+              getRadius: 6370997 * 1.08,
+              radiusUnits: "meters",
+              getFillColor: [232, 116, 60, 25],
+              stroked: false,
+              billboard: true,
+              pickable: false,
+            }),
+            new ScatterplotLayer({
+              id: "globe-atmosphere-glow-inner",
+              data: [{ position: [0, 0, -6370997] }],
+              getPosition: (d) => d.position as [number, number, number],
+              getRadius: 6370997 * 1.03,
+              radiusUnits: "meters",
+              getFillColor: [232, 116, 60, 50],
+              stroked: false,
+              billboard: true,
+              pickable: false,
+            }),
+          ]
+        : []),
       new PolygonLayer({
         id: "surface",
         data: WORLD_SURFACE,
         getPolygon: (item: (typeof WORLD_SURFACE)[number]) => item.polygon,
-        getFillColor: OCEAN_COLOR,
+        getFillColor: MAP_OCEAN_RGBA,
         parameters:
           viewMode === "globe"
             ? {
@@ -213,7 +303,9 @@ const EarthquakeMap = ({ mapData }: Props) => {
       new GeoJsonLayer({
         id: "landmasses",
         data: LAND_DATA_URL,
-        getFillColor: LAND_COLOR,
+        getFillColor:
+          viewMode === "globe" ? MAP_LAND_GLOBE_RGBA : MAP_LAND_RGBA,
+        getLineColor: MAP_LAND_GLOBE_STROKE_RGBA,
         parameters:
           viewMode === "globe"
             ? {
@@ -222,14 +314,18 @@ const EarthquakeMap = ({ mapData }: Props) => {
               }
             : undefined,
         filled: true,
-        stroked: false,
+        stroked: viewMode === "globe",
+        lineWidthMinPixels: viewMode === "globe" ? 0.6 : 0,
         pickable: false,
       }),
       new PathLayer<GraticulePath>({
         id: "graticule",
         data: GRATICULE,
         getPath: (item) => item.path,
-        getColor: viewMode === "map" ? [88, 114, 135, 58] : [78, 102, 124, 90],
+        getColor:
+          viewMode === "map"
+            ? MAP_GRATICULE_MAP_RGBA
+            : MAP_GRATICULE_GLOBE_RGBA,
         widthMinPixels: 1,
         pickable: false,
       }),
@@ -237,27 +333,57 @@ const EarthquakeMap = ({ mapData }: Props) => {
     [viewMode],
   );
 
+  const quakeGlowLayer = useMemo(() => {
+    return new ScatterplotLayer<MapPoint>({
+      id: "earthquakes-glow",
+      data: visiblePoints,
+      getPosition: (p) => p.position,
+      getRadius: (p) => {
+        const baseRadius =
+          viewMode === "map"
+            ? getMapBubbleRadius(p, mapZoom, points.length)
+            : getGlobeBubbleRadius(p, globeZoom, points.length);
+        return baseRadius * 1.1;
+      },
+      radiusUnits: "pixels",
+      radiusMinPixels: 1.5,
+      radiusMaxPixels: 45,
+      getFillColor: (p): RgbaColor => bubbleGlowColorForMagnitude(p.magnitude),
+      stroked: false,
+      filled: true,
+      opacity: viewMode === "map" ? 0.3 : 0.2,
+      parameters: {
+        blend: true,
+        blendFunc: [0x0302, 0x0001, 0x0302, 0x0001], // GL.SRC_ALPHA, GL.ONE
+      },
+      pickable: false,
+    });
+  }, [visiblePoints, viewMode, mapZoom, globeZoom, points.length]);
+
   const quakeLayer = useMemo(
     () =>
       new ScatterplotLayer<MapPoint>({
         id: "earthquakes",
-        data: points,
-        getPosition: (point) => point.position,
-        getRadius: (point) =>
+        data: visiblePoints,
+        getPosition: (p) => p.position,
+        getRadius: (p) =>
           viewMode === "map"
-            ? point.mapRadius
-            : getGlobeBubbleRadius(point, globeZoom),
+            ? getMapBubbleRadius(p, mapZoom, points.length)
+            : getGlobeBubbleRadius(p, globeZoom, points.length),
         radiusUnits: "pixels",
-        radiusMinPixels: viewMode === "map" ? 2 : 1.5,
-        radiusMaxPixels: viewMode === "map" ? 26 : 12,
-        getFillColor: (point) => point.fillColor,
-        stroked: false,
+        radiusMinPixels: 0.8,
+        radiusMaxPixels: 35,
+        getFillColor: (p) => p.fillColor,
+        stroked: true,
+        getLineColor: [10, 12, 15, 120],
+        getLineWidth: 0.6,
+        lineWidthUnits: "pixels",
         filled: true,
-        opacity: 0.76,
+        opacity: viewMode === "map" ? 0.85 : 0.7,
         pickable: true,
-        autoHighlight: false,
+        autoHighlight: true,
       }),
-    [globeZoom, points, viewMode],
+    [globeZoom, mapZoom, visiblePoints, viewMode, points.length],
   );
 
   const currentViewState = viewMode === "map" ? mapViewState : globeViewState;
@@ -271,7 +397,9 @@ const EarthquakeMap = ({ mapData }: Props) => {
 
   return (
     <div id="map-container" className="card">
-      <div className="map-shell">
+      <div
+        className={`map-shell ${viewMode === "globe" ? "is-globe" : ""}`.trim()}
+      >
         <div className="map-toolbar">
           <div>
             <p className="map-title">Epicenter Density</p>
@@ -288,17 +416,17 @@ const EarthquakeMap = ({ mapData }: Props) => {
                 if (next) setViewMode(next);
               }}
               sx={{
-                backgroundColor: "rgba(5, 12, 22, 0.65)",
+                backgroundColor: "rgba(17, 20, 26, 0.82)",
                 borderRadius: "999px",
                 "& .MuiToggleButton-root": {
-                  color: "rgba(255,255,255,0.78)",
-                  borderColor: "rgba(255,255,255,0.16)",
+                  color: "var(--ink-1)",
+                  borderColor: "var(--line-2)",
                   paddingInline: "0.9rem",
                 },
                 "& .Mui-selected": {
-                  color: "#ffb25b !important",
-                  backgroundColor: "rgba(255,128,0,0.16) !important",
-                  borderColor: "rgba(255,128,0,0.5) !important",
+                  color: "var(--accent) !important",
+                  backgroundColor: "rgba(232,116,60,0.16) !important",
+                  borderColor: "var(--accent) !important",
                 },
               }}
             >
@@ -310,19 +438,17 @@ const EarthquakeMap = ({ mapData }: Props) => {
                 value="auto-rotate"
                 selected={isAutoRotateEnabled}
                 size="small"
-                onChange={() =>
-                  setIsAutoRotateEnabled((current) => !current)
-                }
+                onChange={() => setIsAutoRotateEnabled((current) => !current)}
                 sx={{
-                  color: "rgba(255,255,255,0.78)",
-                  borderColor: "rgba(255,255,255,0.16)",
+                  color: "var(--ink-1)",
+                  borderColor: "var(--line-2)",
                   borderRadius: "999px",
-                  backgroundColor: "rgba(5, 12, 22, 0.65)",
+                  backgroundColor: "rgba(17, 20, 26, 0.82)",
                   paddingInline: "0.9rem",
                   "&.Mui-selected": {
-                    color: "#ffb25b",
-                    backgroundColor: "rgba(255,128,0,0.16)",
-                    borderColor: "rgba(255,128,0,0.5)",
+                    color: "var(--accent)",
+                    backgroundColor: "rgba(232,116,60,0.16)",
+                    borderColor: "var(--accent)",
                   },
                 }}
               >
@@ -362,7 +488,7 @@ const EarthquakeMap = ({ mapData }: Props) => {
                 setGlobeViewState(next);
               }
             }}
-            layers={[...baseLayers, quakeLayer]}
+            layers={[...baseLayers, quakeGlowLayer, quakeLayer]}
             getTooltip={({ object }: PickingInfo<MapPoint>) =>
               object ? { text: formatTooltip(object) } : null
             }
@@ -375,9 +501,7 @@ const EarthquakeMap = ({ mapData }: Props) => {
 
         <div className="map-legend">
           <span>{points.length.toLocaleString()} earthquakes</span>
-          <span>
-            max M{mapData?.maxMagnitude.toFixed(1) ?? "0.0"}
-          </span>
+          <span>max M{mapData?.maxMagnitude.toFixed(1) ?? "0.0"}</span>
           <span>Orange/red points indicate stronger events</span>
         </div>
       </div>

@@ -35,27 +35,49 @@ const formatStatus = (
   return "";
 };
 
+const getStatusTone = (
+  isLoading: boolean,
+  error: Error | null,
+  lastUpdated: Date | null,
+): string => {
+  if (error) return "is-danger";
+  if (isLoading) return "is-warm";
+  if (lastUpdated) return "is-cool";
+  return "";
+};
+
 const sameQuery = (a: HistoricalQuery, b: HistoricalQuery): boolean =>
   a.startYear === b.startYear &&
   a.endYear === b.endYear &&
   a.minMagnitude === b.minMagnitude;
 
 const inputSx = {
-  width: 90,
-  "& .MuiOutlinedInput-root": { color: "white" },
-  "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(255,255,255,0.3)",
+  width: 96,
+  "& .MuiOutlinedInput-root": {
+    color: "var(--ink-0)",
+    fontFamily: '"JetBrains Mono", monospace',
+    backgroundColor: "var(--bg-2)",
   },
-  "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.6)" },
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: "var(--line-2)",
+  },
+  "& .MuiInputLabel-root": {
+    color: "var(--ink-2)",
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    fontSize: "0.72rem",
+  },
 };
 
 const selectSx = {
-  width: 90,
-  color: "white",
+  width: 106,
+  color: "var(--ink-0)",
+  fontFamily: '"JetBrains Mono", monospace',
+  backgroundColor: "var(--bg-2)",
   "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(255,255,255,0.3)",
+    borderColor: "var(--line-2)",
   },
-  "& .MuiSvgIcon-root": { color: "white" },
+  "& .MuiSvgIcon-root": { color: "var(--ink-1)" },
 };
 
 const DataSourceCard = ({
@@ -90,7 +112,25 @@ const DataSourceCard = ({
   const loadDisabled = isLoading || sameQuery(draft, historicalQuery);
 
   return (
-    <div id="info" className="card data-source-card">
+    <div id="info" className="card panel data-source-card">
+      <div className="panel-header">
+        <div>
+          <p className="panel-kicker">Data Source</p>
+          <p className="panel-title">Acquisition Window</p>
+        </div>
+        <div
+          className={`data-source-status-pill ${getStatusTone(
+            isLoading,
+            error,
+            lastUpdated,
+          )}`}
+        >
+          <span className="status-dot" />
+          <span className="data-source-status">
+            {formatStatus(isLoading, error, lastUpdated) || "Idle"}
+          </span>
+        </div>
+      </div>
       <div className="data-source-row">
         <ToggleButtonGroup
           value={source}
@@ -100,22 +140,23 @@ const DataSourceCard = ({
             if (next) onSourceChange(next);
           }}
           sx={{
+            backgroundColor: "var(--bg-2)",
+            borderRadius: "999px",
             "& .MuiToggleButton-root": {
-              color: "white",
-              borderColor: "rgba(255,255,255,0.3)",
+              color: "var(--ink-1)",
+              borderColor: "var(--line-2)",
+              paddingInline: "1rem",
             },
             "& .Mui-selected": {
-              color: "#ff8000 !important",
-              borderColor: "#ff8000 !important",
+              color: "var(--accent) !important",
+              borderColor: "var(--accent) !important",
+              backgroundColor: "rgba(232, 116, 60, 0.12) !important",
             },
           }}
         >
           <ToggleButton value="historical">Historical</ToggleButton>
           <ToggleButton value="live">Live (USGS)</ToggleButton>
         </ToggleButtonGroup>
-        <span className="data-source-status">
-          {formatStatus(isLoading, error, lastUpdated)}
-        </span>
       </div>
 
       {source === "historical" && (
@@ -162,11 +203,12 @@ const DataSourceCard = ({
             onClick={onLoad}
             disabled={loadDisabled}
             sx={{
-              color: "#ff8000",
-              borderColor: "#ff8000",
+              color: "var(--accent)",
+              borderColor: "var(--accent)",
+              backgroundColor: "rgba(232, 116, 60, 0.08)",
               "&.Mui-disabled": {
-                color: "rgba(255,128,0,0.4)",
-                borderColor: "rgba(255,128,0,0.2)",
+                color: "rgba(232,116,60,0.35)",
+                borderColor: "rgba(232,116,60,0.18)",
               },
             }}
           >

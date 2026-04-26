@@ -3,7 +3,6 @@ import "chart.js/auto";
 import { useState } from "react";
 import {
   buildBarChart,
-  buildLineChart,
   buildMapData,
   buildPieChart,
   computeQuakeNumber,
@@ -17,7 +16,6 @@ import RangeSliderCard from "./components/RangeSliderCard";
 import DataSourceCard from "./components/DataSourceCard";
 import MagTypePieChart from "./components/MagTypePieChart";
 import MagSourceBarChart from "./components/MagSourceBarChart";
-import MagLineChart from "./components/MagLineChart";
 import EarthquakeMap from "./components/EarthquakeMap";
 
 function App() {
@@ -43,7 +41,6 @@ function App() {
   const quakeNumber = filtered ? computeQuakeNumber(filtered) : null;
   const pieConfig = filtered ? buildPieChart(filtered) : null;
   const barConfig = filtered ? buildBarChart(filtered) : null;
-  const lineConfig = filtered ? buildLineChart(filtered) : null;
   const mapData = filtered ? buildMapData(filtered) : null;
 
   return (
@@ -52,7 +49,7 @@ function App() {
         <RangeSliderCard
           key={`mag-${source}`}
           id="mag-RangeSlider-container"
-          title="Magnitutude Range"
+          title="Magnitude Range"
           min={bounds.mag[0]}
           max={bounds.mag[1]}
           step={0.1}
@@ -95,7 +92,6 @@ function App() {
       <MagTypePieChart config={pieConfig} />
       <MagSourceBarChart config={barConfig} />
       <EarthquakeMap mapData={mapData} />
-      <MagLineChart config={lineConfig} />
     </>
   );
 }
