@@ -60,11 +60,11 @@ body,
 }
 
 #info {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   margin-top: 0.3rem;
 
   grid-row-start: 1;
-  grid-row-end: 4;
+  grid-row-end: 7;
   grid-column-start: 4;
   grid-column-end: 9;
 }
@@ -76,7 +76,7 @@ body,
   align-items: center;
   justify-content: center;
 
-  grid-row-start: 4;
+  grid-row-start: 7;
   grid-row-end: 13;
   grid-column-start: 4;
   grid-column-end: 6;
@@ -89,7 +89,7 @@ body,
   align-items: center;
   justify-content: center;
 
-  grid-row-start: 4;
+  grid-row-start: 7;
   grid-row-end: 13;
   grid-column-start: 6;
   grid-column-end: 9;
@@ -139,4 +139,25 @@ body,
 
 .shares {
   font-size: 3rem;
+}
+
+.data-source-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.data-source-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.data-source-status {
+  font-size: 0.85rem;
+  opacity: 0.8;
 }
