@@ -1,11 +1,32 @@
 #root {
-  display: grid;
-  gap: 12px;
-  grid-template-rows: repeat(28, 1fr);
-  grid-template-columns: repeat(20, 1fr);
   padding: 12px;
   background:
     radial-gradient(circle at top left, rgba(232, 116, 60, 0.08), transparent 26%),
     radial-gradient(circle at top right, rgba(95, 179, 168, 0.08), transparent 22%),
     linear-gradient(180deg, rgba(17, 20, 26, 0.6), rgba(10, 12, 15, 0.95));
+}
+
+.app-layout {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  height: 100%;
+}
+
+.controls-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+  width: 260px;
+  height: 100%;
+}
+
+.controls-bar #info {
+  min-height: 270px;
+}
+
+#map-container {
+  flex: 1;
+  min-width: 0;
 }

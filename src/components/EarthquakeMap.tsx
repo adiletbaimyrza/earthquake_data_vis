@@ -22,6 +22,7 @@ import {
   bubbleGlowColorForMagnitude,
 } from "../designTokens";
 import type { MapData, MapPoint, RgbaColor } from "../types";
+import EarthquakeDetailDrawer from "./EarthquakeDetailDrawer";
 
 type Props = { mapData: MapData | null };
 
@@ -169,6 +170,7 @@ const EarthquakeMap = ({ mapData }: Props) => {
   const [viewMode, setViewMode] = useState<ViewMode>("globe");
   const [isAutoRotateEnabled, setIsAutoRotateEnabled] =
     useState<boolean>(false);
+  const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
   const [mapViewState, setMapViewState] = useState<ControlledViewState>(() =>
     createMapViewState(mapData),
   );
@@ -386,6 +388,27 @@ const EarthquakeMap = ({ mapData }: Props) => {
     [globeZoom, mapZoom, visiblePoints, viewMode, points.length],
   );
 
+  const selectedLayer = useMemo(() => {
+    if (!selectedPoint) return null;
+    return new ScatterplotLayer<MapPoint>({
+      id: "earthquake-selected",
+      data: [selectedPoint],
+      getPosition: (p) => p.position,
+      getRadius: (p) =>
+        (viewMode === "map"
+          ? getMapBubbleRadius(p, mapZoom, points.length)
+          : getGlobeBubbleRadius(p, globeZoom, points.length)) + 4,
+      radiusUnits: "pixels",
+      getFillColor: [0, 0, 0, 0],
+      getLineColor: [255, 255, 255, 220] as RgbaColor,
+      getLineWidth: 1.5,
+      lineWidthUnits: "pixels",
+      stroked: true,
+      filled: true,
+      pickable: false,
+    });
+  }, [selectedPoint, viewMode, mapZoom, globeZoom, points.length]);
+
   const currentViewState = viewMode === "map" ? mapViewState : globeViewState;
   const currentView = useMemo(
     () =>
@@ -458,46 +481,59 @@ const EarthquakeMap = ({ mapData }: Props) => {
           </div>
         </div>
 
-        {hasData ? (
-          <DeckGL
-            key={viewMode}
-            style={{ position: "absolute", inset: "0" }}
-            views={currentView}
-            controller={true}
-            useDevicePixels={1}
-            parameters={
-              viewMode === "globe" ? ({ cull: true } as never) : undefined
-            }
-            viewState={currentViewState}
-            onViewStateChange={({
-              viewState,
-              interactionState,
-            }: ViewStateChangeArgs) => {
-              const next = normalizeViewState(viewState as DeckViewState);
-              if (viewMode === "map") {
-                setMapViewState(next);
-              } else {
-                if (
-                  interactionState?.isDragging ||
-                  interactionState?.isPanning ||
-                  interactionState?.isRotating ||
-                  interactionState?.isZooming
-                ) {
-                  setIsAutoRotateEnabled(false);
-                }
-                setGlobeViewState(next);
+        <DeckGL
+          key={viewMode}
+          style={{ position: "absolute", inset: "0" }}
+          views={currentView}
+          controller={true}
+          useDevicePixels={1}
+          parameters={
+            viewMode === "globe" ? ({ cull: true } as never) : undefined
+          }
+          viewState={currentViewState}
+          onViewStateChange={({
+            viewState,
+            interactionState,
+          }: ViewStateChangeArgs) => {
+            const next = normalizeViewState(viewState as DeckViewState);
+            if (viewMode === "map") {
+              setMapViewState(next);
+            } else {
+              if (
+                interactionState?.isDragging ||
+                interactionState?.isPanning ||
+                interactionState?.isRotating ||
+                interactionState?.isZooming
+              ) {
+                setIsAutoRotateEnabled(false);
               }
-            }}
-            layers={[...baseLayers, quakeGlowLayer, quakeLayer]}
-            getTooltip={({ object }: PickingInfo<MapPoint>) =>
-              object ? { text: formatTooltip(object) } : null
+              setGlobeViewState(next);
             }
-          />
-        ) : (
+          }}
+          layers={[
+            ...baseLayers,
+            quakeGlowLayer,
+            quakeLayer,
+            ...(selectedLayer ? [selectedLayer] : []),
+          ]}
+          onClick={({ object }: PickingInfo<MapPoint>) => {
+            setSelectedPoint(object ?? null);
+            if (object) setIsAutoRotateEnabled(false);
+          }}
+          getTooltip={({ object }: PickingInfo<MapPoint>) =>
+            object ? { text: formatTooltip(object) } : null
+          }
+        />
+        {!hasData && (
           <div className="map-empty">
             No earthquakes match the current filters.
           </div>
         )}
+
+        <EarthquakeDetailDrawer
+          point={selectedPoint}
+          onClose={() => setSelectedPoint(null)}
+        />
 
         <div className="map-legend">
           <span>{points.length.toLocaleString()} earthquakes</span>

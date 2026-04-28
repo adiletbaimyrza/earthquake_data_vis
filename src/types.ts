@@ -1,5 +1,3 @@
-import type { ChartData, ChartOptions, ChartType } from "chart.js";
-
 export type EarthquakeRecord = {
   id: string;
   year: string;
@@ -11,8 +9,6 @@ export type EarthquakeRecord = {
   magType: string;
   place: string;
   magSource: string;
-  bubble_size: string;
-  color: string;
 };
 
 export type Range = [number, number];
@@ -23,7 +19,6 @@ export type MapPoint = {
   id: string;
   position: [number, number];
   mapRadius: number;
-  globeRadius: number;
   fillColor: RgbaColor;
   magnitude: number;
   depth: number;
@@ -42,11 +37,6 @@ export type MapData = {
   maxMagnitude: number;
 };
 
-export type ChartConfig<T extends ChartType> = {
-  type: T;
-  data: ChartData<T>;
-  options: ChartOptions<T>;
-};
 
 export type HistoricalQuery = {
   startYear: number;

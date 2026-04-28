@@ -22,17 +22,6 @@ type UsgsFeatureCollection = {
   features: UsgsFeature[];
 };
 
-const magnitudeColor = (mag: number): string => {
-  if (mag >= 7) return "#ff0000";
-  if (mag >= 6) return "#ff6e00";
-  if (mag >= 5) return "#ffca00";
-  if (mag >= 4) return "#ffff00";
-  if (mag >= 3) return "#a8e000";
-  return "#00d000";
-};
-
-const magnitudeBubbleSize = (mag: number): number => Math.max(mag * 1.4, 1);
-
 const normalizeFeature = (feature: UsgsFeature): EarthquakeRecord => {
   const mag = feature.properties.mag ?? 0;
   const date = new Date(feature.properties.time);
@@ -48,8 +37,6 @@ const normalizeFeature = (feature: UsgsFeature): EarthquakeRecord => {
     magType: feature.properties.magType ?? "",
     place: feature.properties.place ?? "",
     magSource: feature.properties.net ?? "",
-    bubble_size: String(magnitudeBubbleSize(mag)),
-    color: magnitudeColor(mag),
   };
 };
 
